@@ -1,33 +1,62 @@
 {% extends 'debates/base.html' %}
 
 {% block content %}
-<h2>โปรไฟล์ของคุณ {{ user.username }}</h2>
-<a href="{% url 'topic_list' %}">กลับหน้าแรก</a>
-<hr>
+    <!-- หัวข้อโปรไฟล์และปุ่มกลับ -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="bi bi-person-circle me-2" style="color: #ff7b00;"></i>โปรไฟล์ของคุณ {{ user.username }}
+        </h2>
+        <a href="{% url 'topic_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>กลับหน้าแรก
+        </a>
+    </div>
 
-<h3>กระทู้ที่ฉันตั้ง</h3>
-<ul>
-    {% for topic in my_topics %}
-    <li>
-        <a href="{% url 'topic_detail' topic.id %}">{{ topic.title }}</a>
-    </li>
-    {% empty %}
-    <p>คุณยังไม่เคยตั้งกระทู้</p>
-    {% endfor %}
-</ul>
+    <div class="row">
+        <!-- คอลัมน์ซ้าย: กระทู้ที่ฉันตั้ง -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0 h-100" style="background-color: #fcfcfc;">
+                <div class="card-body p-4">
+                    <h4 class="mb-4"><i class="bi bi-card-list me-2" style="color: #ff7b00;"></i>กระทู้ที่ฉันตั้ง</h4>
+                    
+                    <div class="list-group list-group-flush">
+                        {% for topic in my_topics %}
+                            <a href="{% url 'topic_detail' topic.id %}" class="list-group-item list-group-item-action border-0 mb-2 rounded shadow-sm">
+                                <strong class="d-block mb-1">{{ topic.title }}</strong>
+                                <small class="text-muted"><i class="bi bi-box-arrow-in-right me-1"></i>คลิกเพื่อดูรายละเอียด</small>
+                            </a>
+                        {% empty %}
+                            <p class="text-muted text-center py-3">คุณยังไม่เคยตั้งกระทู้</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<hr>
-
-<h3>ประวัติการโหวตและคอมเมนต์</h3>
-<ul>
-    {% for comment in my_comments %}
-    <li style="margin-bottom: 10px;">
-        โหวตฝั่ง <strong>{{ comment.side.name }}</strong> ในกระทู้
-        <a href="{% url 'topic_detail' comment.topic.id %}">{{ comment.topic.title }}</a><br>
-        เหตุผล: {{ comment.text }}
-    </li>
-    {% empty %}
-    <p>คุณยังไม่เคยร่วมโหวตหรือคอมเมนต์</p>
-    {% endfor %}
-</ul>
+        <!-- คอลัมน์ขวา: ประวัติการโหวตและคอมเมนต์ -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0 h-100" style="background-color: #fcfcfc;">
+                <div class="card-body p-4">
+                    <h4 class="mb-4"><i class="bi bi-chat-left-text me-2" style="color: #ff7b00;"></i>ประวัติการโหวต</h4>
+                    
+                    {% for comment in my_comments %}
+                        <div class="card mb-3 border-0 shadow-sm">
+                            <div class="card-body p-3">
+                                <div class="mb-2">
+                                    <span class="badge border border-warning text-warning bg-light me-1">
+                                        โหวตฝั่ง: {{ comment.side.name }}
+                                    </span>
+                                    <small class="text-muted">
+                                        ในกระทู้ <a href="{% url 'topic_detail' comment.topic.id %}" style="color: #ff7b00; text-decoration: none;">{{ comment.topic.title }}</a>
+                                    </small>
+                                </div>
+                                <p class="card-text mb-0"><i class="bi bi-quote text-muted"></i> {{ comment.text }}</p>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted text-center py-3">คุณยังไม่เคยร่วมโหวตหรือคอมเมนต์</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

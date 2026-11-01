@@ -1,44 +1,167 @@
 {% extends 'debates/base.html' %}
 
 {% block content %}
-<h1>ประเด็นร้อนที่กำลังถกเถียง
-    <a href="{% url 'create_topic' %}"><button style="margin-bottom:15px;">+ ตั้งประเด็นใหม่</button></a>
-</h1>
+<!-- ส่วนหัว, ช่องค้นหา, และปุ่มสลับมุมมอง -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-3 mb-3 mb-md-0">
+        <h2 class="mb-0 fw-bold">หัวข้อ Topics</h2>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
+            <!-- ฟอร์มค้นหา -->
+            <form method="GET" action="{% url 'topic_list' %}" class="flex-grow-1" style="max-width: 350px; margin-bottom: 0;">
+                <div class="input-group shadow-sm align-items-stretch">
+                    <span class="input-group-text bg-white border-end-0 d-flex align-items-center">
+                        <i class="bi bi-search" style="color: #ff7b00;"></i>
+                    </span>
+                    <input type="text" name="q" value="{{ search_query|default_if_none:'' }}" class="form-control border-start-0 m-0" placeholder="ค้นหาชื่อกระทู้..." style="box-shadow: none; margin: 0 !important;">
+                    <button class="btn btn-dark px-3 m-0" type="submit" style="margin: 0 !important;">ค้นหา</button>
+                </div>
+            </form>
 
-{% if user.is_authenticated %}
-<p>สวัสดีคุณ {{ user.username }} |
-    <a href="{% url 'user_profile' %}">ดูโปรไฟล์</a> |
-<form action="{% url 'logout' %}" method="post" style="display:inline;">
-    {% csrf_token %}
-    <button type="submit">ออกจากระบบ</button>
-</form>
-</p>
-{% else %}
-<p><a href="{% url 'login' %}">เข้าสู่ระบบ</a> | <a href="{% url 'signup' %}">สมัครสมาชิก</a></p>
-{% endif %}
-
-<hr>
-
-{% for topic in topics %}
-<div style="margin-bottom: 20px;">
-    <h2>{{ topic.title }}</h2>
-    <p>{{ topic.description }}</p>
-    <p style="color: gray; font-size: 14px;">
-        ตั้งกระทู้โดย: {{ topic.created_by.username }}
-    </p>
-    <a href="{% url 'topic_detail' topic.id %}"><button>เข้าไปอ่านและโหวต</button></a>
-
-    {% if user == topic.created_by %}
-    <form action="{% url 'delete_topic' topic.id %}" method="POST" style="display:inline;"
-        onsubmit="return confirm('แน่ใจหรือไม่ว่าต้องการลบกระทู้นี้?');">
-        {% csrf_token %}
-        <button type="submit" style="color: red; margin-left: 10px;">ลบกระทู้</button>
-    </form>
-    <a href="{% url 'edit_topic' topic.id %}"><button style="color: orange;">แก้ไขเนื้อหา</button></a>
-    {% endif %}
+            <!-- ปุ่มสลับมุมมอง (1 คอลัมน์ / 2 คอลัมน์) -->
+            <div class="btn-group shadow-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary active" id="btn-col-1" onclick="setView(1)" title="แสดงแถวละ 1 หัวข้อ">
+                    <i class="bi bi-list-task"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="btn-col-2" onclick="setView(2)" title="แสดงแถวละ 2 หัวข้อ">
+                    <i class="bi bi-grid-fill"></i>
+                </button>
+            </div>
+            
+            <!-- ปุ่มตั้งประเด็นใหม่ -->
+            <a href="{% url 'create_topic' %}" class="btn btn-orange shadow-sm d-flex align-items-center text-nowrap">
+                <i class="bi bi-plus-circle me-1"></i> ตั้งประเด็นใหม่
+            </a>
+        </div>
+    </div>
 </div>
-<hr>
+
+<!-- ส่วนแสดงรายการกระทู้ (ครอบด้วย Row และกำหนดคลาสเพื่อสลับมุมมอง) -->
+<div class="row" id="topic-container">
+{% for topic in topics %}
+    <!-- ค่าเริ่มต้นให้เป็น col-12 (แถวละ 1) -->
+    <div class="col-12 topic-col mb-4">
+        <div class="topic-card h-100">
+            
+            <!-- ชื่อกระทู้และป้ายเวลา -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-2 gap-2">
+                <h2 class="mb-0 order-2 order-md-1" style="font-size: 1.4rem;">{{ topic.title }}</h2>
+                
+                <div class="order-1 order-md-2 align-self-start">
+                    {% if topic.end_date %}
+                        {% if topic.is_expired %}
+                            <span class="badge bg-danger rounded-pill px-3 py-2"><i class="bi bi-clock-history me-1"></i> ปิดโหวตแล้ว</span>
+                        {% else %}
+                            <span class="badge bg-success rounded-pill px-3 py-2"><i class="bi bi-clock me-1"></i> {{ topic.time_left_display }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-primary rounded-pill px-3 py-2"><i class="bi bi-infinity me-1"></i> เปิดโหวตตลอด</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <p class="text-secondary">{{ topic.description }}</p>
+            <p style="color: gray; font-size: 14px; margin-bottom: 10px;">
+                ตั้งกระทู้โดย: {{ topic.created_by.username }}
+            </p>
+
+            <!-- สรุปผลโหวตแบบย่อ -->
+            {% with total_votes=topic.comments.count %}
+                {% if total_votes > 0 %}
+                    <div class="mb-3 px-1">
+                        <div class="d-flex flex-wrap gap-3 mb-1" style="font-size: 13px;">
+                            {% for side in topic.sides.all %}
+                                <span>
+                                    <span style="color: {% if forloop.counter == 1 %}#ff7b00{% elif forloop.counter == 2 %}#6c757d{% elif forloop.counter == 3 %}#0d6efd{% else %}#198754{% endif %};">●</span>
+                                    {{ side.name }} ({{ side.comment_set.count }})
+                                </span>
+                            {% endfor %}
+                            <span class="text-muted ms-auto">โหวตแล้ว {{ total_votes }} คน</span>
+                        </div>
+                        
+                        <div class="progress" style="height: 10px; border-radius: 5px;">
+                            {% for side in topic.sides.all %}
+                                {% if side.comment_set.count > 0 %}
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {% widthratio side.comment_set.count total_votes 100 %}%; 
+                                            background-color: {% if forloop.counter == 1 %}#ff7b00{% elif forloop.counter == 2 %}#6c757d{% elif forloop.counter == 3 %}#0d6efd{% else %}#198754{% endif %};" 
+                                     aria-valuenow="{% widthratio side.comment_set.count total_votes 100 %}" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted" style="font-size: 13px;"><em>ยังไม่มีผู้ลงคะแนนโหวต</em></p>
+                {% endif %}
+            {% endwith %}
+
+            <!-- ปุ่มจัดการ -->
+            <div class="d-flex align-items-center gap-2 mt-3">
+                <a href="{% url 'topic_detail' topic.id %}">
+                    <button class="btn btn-outline-orange btn-sm"><i class="bi bi-chat-text me-1"></i> อ่านและโหวต</button>
+                </a>
+
+                {% if user == topic.created_by %}
+                <form action="{% url 'delete_topic' topic.id %}" method="POST" class="m-0"
+                    onsubmit="return confirm('แน่ใจหรือไม่ว่าต้องการลบกระทู้นี้?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash3 me-1"></i> ลบ</button>
+                </form>
+                <a href="{% url 'edit_topic' topic.id %}">
+                    <button class="btn btn-warning btn-sm text-white"><i class="bi bi-pencil-square me-1"></i> แก้ไข</button>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 {% empty %}
-<p>ยังไม่มีกระทู้ในตอนนี้ ลองเข้าไปเพิ่มในระบบหลังบ้านดูสิ!</p>
+    <div class="col-12">
+        <p class="text-center text-muted">ยังไม่มีกระทู้ในตอนนี้ ลองคลิก "ตั้งประเด็นใหม่" เพื่อเริ่มเลย!</p>
+    </div>
 {% endfor %}
+</div>
+
+<!-- สคริปต์สำหรับสลับมุมมองแถว (1 หรือ 2 คอลัมน์) และจดจำสถานะผ่าน localStorage -->
+<script>
+    function setView(cols) {
+        const topicCols = document.querySelectorAll('.topic-col');
+        const btn1 = document.getElementById('btn-col-1');
+        const btn2 = document.getElementById('btn-col-2');
+
+        topicCols.forEach(col => {
+            col.classList.remove('col-12', 'col-md-6');
+            if (cols === 2) {
+                col.classList.add('col-12', 'col-md-6'); // แถวละ 2 บนจอคอม (col-md-6)
+            } else {
+                col.classList.add('col-12'); // แถวละ 1 เต็มจอ
+            }
+        });
+
+        if (cols === 2) {
+            btn2.classList.add('active', 'btn-secondary');
+            btn2.classList.remove('btn-outline-secondary');
+            btn1.classList.remove('active', 'btn-secondary');
+            btn1.classList.add('btn-outline-secondary');
+        } else {
+            btn1.classList.add('active', 'btn-secondary');
+            btn1.classList.remove('btn-outline-secondary');
+            btn2.classList.remove('active', 'btn-secondary');
+            btn2.classList.add('btn-outline-secondary');
+        }
+
+        // บันทึกค่าไว้ในเบราว์เซอร์ เพื่อให้เวลาเปลี่ยนหน้าหรือรีเฟรช ค่าไม่หาย
+        localStorage.setItem('topic_view_mode', cols);
+    }
+
+    // โหลดค่าที่เคยเลือกไว้ตอนเปิดหน้าเว็บ
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedView = localStorage.getItem('topic_view_mode');
+        if (savedView) {
+            setView(parseInt(savedView));
+        }
+    });
+</script>
 {% endblock %}
