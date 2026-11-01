@@ -1,10 +1,36 @@
 {% extends 'debates/base.html' %}
 
 {% block content %}
-<h2>สมัครสมาชิก</h2>
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">สมัครเลย</button>
-</form>
+<div class="row justify-content-center py-4">
+    <div class="col-md-8 col-lg-5">
+        <!-- ส่วนหัว -->
+        <div class="text-center mb-4">
+            <h2 class="fw-bold"><i class="bi bi-person-plus me-2" style="color: #ff7b00;"></i>สมัครสมาชิก</h2>
+            <p class="text-muted">ร่วมเป็นส่วนหนึ่งของการถกเถียงอย่างสร้างสรรค์</p>
+        </div>
+        
+        <!-- ฟอร์มกรอกข้อมูล -->
+        <div class="card shadow-sm border-0" style="background-color: #fcfcfc;">
+            <div class="card-body p-4 p-md-5">
+                <form method="POST">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    
+                    <button type="submit" class="btn btn-orange w-100 mt-3 py-2 fw-bold">
+                        <i class="bi bi-check-circle me-2"></i>ยืนยันการสมัครสมาชิก
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- ลิงก์ไปหน้าเข้าสู่ระบบ -->
+        <div class="text-center mt-4">
+            <p class="text-secondary">มีบัญชีอยู่แล้ว? 
+                <a href="{% url 'login' %}" style="color: #ff7b00; font-weight: 500; text-decoration: none;">
+                    เข้าสู่ระบบที่นี่
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
 {% endblock %}

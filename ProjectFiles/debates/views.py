@@ -4,11 +4,24 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from .forms import TopicForm, EditTopicForm
+from django.db.models import Q
 
 
 def topic_list(request):
-    topics = Topic.objects.all().order_by("-created_at")
-    return render(request, "debates/topic_list.html", {"topics": topics})
+    search_query = request.GET.get('q', '')
+    
+    if search_query:
+        topics = Topic.objects.filter(
+            Q(title__icontains=search_query) | Q(description__icontains=search_query)
+        ).distinct()
+    else:
+        topics = Topic.objects.all() 
+
+    # ส่ง topics และ search_query กลับไปที่หน้า HTML
+    return render(request, 'debates/topic_list.html', {
+        'topics': topics,
+        'search_query': search_query
+    })
 
 
 def topic_detail(request, topic_id):
@@ -42,21 +55,24 @@ def signup(request):
 
 @login_required
 def create_topic(request):
-    if request.method == "POST":
+    if request.method == 'POST':
         form = TopicForm(request.POST)
+        sides = request.POST.getlist('sides') 
+        
         if form.is_valid():
             topic = form.save(commit=False)
-            topic.created_by = request.user  # ผูกกระทู้กับคนที่ล็อกอิน
+            topic.created_by = request.user
             topic.save()
-
-            # บันทึกตัวเลือกทั้ง 2 ฝั่งลงฐานข้อมูล
-            Side.objects.create(topic=topic, name=form.cleaned_data["side1"])
-            Side.objects.create(topic=topic, name=form.cleaned_data["side2"])
-
-            return redirect("topic_list")
+            
+            for side_name in sides:
+                if side_name.strip():  
+                    Side.objects.create(topic=topic, name=side_name.strip())
+                    
+            return redirect('topic_list')
     else:
         form = TopicForm()
-    return render(request, "debates/create_topic.html", {"form": form})
+        
+    return render(request, 'debates/create_topic.html', {'form': form})
 
 
 @login_required

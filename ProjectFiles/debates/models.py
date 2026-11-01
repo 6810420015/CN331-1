@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class Topic(models.Model):
@@ -9,6 +10,39 @@ class Topic(models.Model):
         User, on_delete=models.CASCADE, verbose_name="ผู้ตั้งกระทู้"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+
+    def is_expired(self):
+        if self.end_date:
+            return timezone.now() >= self.end_date
+        return False
+
+    def time_left_display(self):
+        if not self.end_date:
+            return ""
+
+        now = timezone.now()
+        if now >= self.end_date:
+            return "หมดเวลาแล้ว"
+
+        diff = self.end_date - now
+        days = diff.days
+        seconds = diff.seconds
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+
+        time_parts = []
+        if days > 0:
+            time_parts.append(f"{days} วัน")
+        if hours > 0:
+            time_parts.append(f"{hours} ชั่วโมง")
+        if minutes > 0:
+            time_parts.append(f"{minutes} นาที")
+
+        if not time_parts:
+            return "เหลือเวลาไม่ถึง 1 นาที"
+
+        return f"เหลือเวลา {' '.join(time_parts)}"
 
     def __str__(self):
         return self.title
