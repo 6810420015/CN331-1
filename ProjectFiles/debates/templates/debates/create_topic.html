@@ -1,0 +1,12 @@
+{% extends 'debates/base.html' %}
+
+{% block content %}
+<h2>ตั้งประเด็นถกเถียงใหม่</h2>
+<form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">ตั้งกระทู้</button>
+</form>
+<br>
+<a href="{% url 'topic_list' %}">ยกเลิก</a>
+{% endblock %}

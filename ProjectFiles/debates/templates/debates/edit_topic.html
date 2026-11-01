@@ -1,0 +1,12 @@
+{% extends 'debates/base.html' %}
+
+{% block content %}
+<h2>แก้ไขประเด็นถกเถียง</h2>
+<form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">บันทึกการแก้ไข</button>
+</form>
+<br>
+<a href="{% url 'topic_detail' topic.id %}">ยกเลิก</a>
+{% endblock %}

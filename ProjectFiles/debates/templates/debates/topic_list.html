@@ -1,0 +1,44 @@
+{% extends 'debates/base.html' %}
+
+{% block content %}
+<h1>ประเด็นร้อนที่กำลังถกเถียง
+    <a href="{% url 'create_topic' %}"><button style="margin-bottom:15px;">+ ตั้งประเด็นใหม่</button></a>
+</h1>
+
+{% if user.is_authenticated %}
+<p>สวัสดีคุณ {{ user.username }} |
+    <a href="{% url 'user_profile' %}">ดูโปรไฟล์</a> |
+<form action="{% url 'logout' %}" method="post" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit">ออกจากระบบ</button>
+</form>
+</p>
+{% else %}
+<p><a href="{% url 'login' %}">เข้าสู่ระบบ</a> | <a href="{% url 'signup' %}">สมัครสมาชิก</a></p>
+{% endif %}
+
+<hr>
+
+{% for topic in topics %}
+<div style="margin-bottom: 20px;">
+    <h2>{{ topic.title }}</h2>
+    <p>{{ topic.description }}</p>
+    <p style="color: gray; font-size: 14px;">
+        ตั้งกระทู้โดย: {{ topic.created_by.username }}
+    </p>
+    <a href="{% url 'topic_detail' topic.id %}"><button>เข้าไปอ่านและโหวต</button></a>
+
+    {% if user == topic.created_by %}
+    <form action="{% url 'delete_topic' topic.id %}" method="POST" style="display:inline;"
+        onsubmit="return confirm('แน่ใจหรือไม่ว่าต้องการลบกระทู้นี้?');">
+        {% csrf_token %}
+        <button type="submit" style="color: red; margin-left: 10px;">ลบกระทู้</button>
+    </form>
+    <a href="{% url 'edit_topic' topic.id %}"><button style="color: orange;">แก้ไขเนื้อหา</button></a>
+    {% endif %}
+</div>
+<hr>
+{% empty %}
+<p>ยังไม่มีกระทู้ในตอนนี้ ลองเข้าไปเพิ่มในระบบหลังบ้านดูสิ!</p>
+{% endfor %}
+{% endblock %}

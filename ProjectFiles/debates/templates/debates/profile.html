@@ -1,0 +1,33 @@
+{% extends 'debates/base.html' %}
+
+{% block content %}
+<h2>โปรไฟล์ของคุณ {{ user.username }}</h2>
+<a href="{% url 'topic_list' %}">กลับหน้าแรก</a>
+<hr>
+
+<h3>กระทู้ที่ฉันตั้ง</h3>
+<ul>
+    {% for topic in my_topics %}
+    <li>
+        <a href="{% url 'topic_detail' topic.id %}">{{ topic.title }}</a>
+    </li>
+    {% empty %}
+    <p>คุณยังไม่เคยตั้งกระทู้</p>
+    {% endfor %}
+</ul>
+
+<hr>
+
+<h3>ประวัติการโหวตและคอมเมนต์</h3>
+<ul>
+    {% for comment in my_comments %}
+    <li style="margin-bottom: 10px;">
+        โหวตฝั่ง <strong>{{ comment.side.name }}</strong> ในกระทู้
+        <a href="{% url 'topic_detail' comment.topic.id %}">{{ comment.topic.title }}</a><br>
+        เหตุผล: {{ comment.text }}
+    </li>
+    {% empty %}
+    <p>คุณยังไม่เคยร่วมโหวตหรือคอมเมนต์</p>
+    {% endfor %}
+</ul>
+{% endblock %}

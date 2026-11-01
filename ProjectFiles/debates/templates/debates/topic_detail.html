@@ -1,0 +1,33 @@
+{% extends 'debates/base.html' %}
+
+{% block content %}
+<h2>{{ topic.title }}</h2>
+<p>{{ topic.description }}</p>
+<hr>
+
+<form method="POST">
+    {% csrf_token %}
+    {% for side in topic.sides.all %}
+    <input type="radio" id="side_{{ side.id }}" name="side" value="{{ side.id }}" required>
+    <label for="side_{{ side.id }}">{{ side.name }} ({{ side.comment_set.count }} โหวต)</label><br>
+    {% endfor %}
+    <br>
+    <textarea name="comment_text" rows="3" cols="50" placeholder="พิมพ์เหตุผลที่เลือกฝั่งนี้..." required
+        style="width: 100%; max-width: 500px;"></textarea><br><br>
+    <button type="submit">ยืนยันผลโหวต</button>
+</form>
+
+<hr>
+<h3>ความคิดเห็นจากผู้โหวต</h3>
+{% for comment in topic.comments.all %}
+<div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+    <strong>{{ comment.author.username }}</strong> (เลือกฝั่ง: {{ comment.side.name }})
+    <p style="margin-top: 5px; margin-bottom: 0;">{{ comment.text }}</p>
+</div>
+{% empty %}
+<p>ยังไม่มีความคิดเห็น เป็นคนแรกที่เริ่มแชร์มุมมองสิ!</p>
+{% endfor %}
+
+<br>
+<a href="{% url 'topic_list' %}">กลับหน้าแรก</a>
+{% endblock %}
