@@ -1,36 +1,38 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import Topic, Side, Comment
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import redirect_to_login
-from django.contrib import messages
-from .forms import TopicForm, EditTopicForm
 from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import EditTopicForm, TopicForm
+from .models import Comment, Side, Topic
 
 
 def topic_list(request):
-    search_query = request.GET.get('q', '')
-    
+    search_query = request.GET.get("q", "")
     if search_query:
         topics = Topic.objects.filter(
             Q(title__icontains=search_query) | Q(description__icontains=search_query)
         ).distinct()
     else:
-        topics = Topic.objects.all() 
+        topics = Topic.objects.all()
 
-    # ส่ง topics และ search_query กลับไปที่หน้า HTML
-    return render(request, 'debates/topic_list.html', {
-        'topics': topics,
-        'search_query': search_query
-    })
+    return render(
+        request,
+        "debates/topic_list.html",
+        {"topics": topics, "search_query": search_query},
+    )
 
 
 def topic_detail(request, topic_id):
     topic = get_object_or_404(Topic, id=topic_id)
     user_vote = None
     if request.user.is_authenticated:
-        user_vote = topic.comments.filter(author=request.user, side__isnull=False).first()
+        user_vote = topic.comments.filter(
+            author=request.user, side__isnull=False
+        ).first()
 
     if request.method == "POST":
         if not request.user.is_authenticated:
@@ -51,7 +53,6 @@ def topic_detail(request, topic_id):
             messages.error(request, "กรุณาเลือกฝั่งและเขียนความคิดเห็นก่อนส่ง")
             return redirect("topic_detail", topic_id=topic.id)
 
-        # Restrict the choice to this topic; a side from another topic is invalid.
         try:
             selected_side = Side.objects.get(id=side_id, topic=topic)
         except (Side.DoesNotExist, TypeError, ValueError):
@@ -85,24 +86,21 @@ def signup(request):
 
 @login_required
 def create_topic(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = TopicForm(request.POST)
-        sides = request.POST.getlist('sides') 
-        
+        sides = request.POST.getlist("sides")
         if form.is_valid():
             topic = form.save(commit=False)
             topic.created_by = request.user
             topic.save()
-            
             for side_name in sides:
-                if side_name.strip():  
+                if side_name.strip():
                     Side.objects.create(topic=topic, name=side_name.strip())
-                    
-            return redirect('topic_list')
+            return redirect("topic_list")
     else:
         form = TopicForm()
-        
-    return render(request, 'debates/create_topic.html', {'form': form})
+
+    return render(request, "debates/create_topic.html", {"form": form})
 
 
 @login_required
