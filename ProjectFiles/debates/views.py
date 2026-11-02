@@ -78,7 +78,6 @@ def create_topic(request):
 @login_required
 def delete_topic(request, topic_id):
     topic = get_object_or_404(Topic, id=topic_id)
-    # ตรวจสอบว่าเป็นเจ้าของกระทู้จริงๆ
     if request.user == topic.created_by:
         topic.delete()
     return redirect("topic_list")
@@ -88,7 +87,6 @@ def delete_topic(request, topic_id):
 def edit_topic(request, topic_id):
     topic = get_object_or_404(Topic, id=topic_id)
 
-    # ป้องกันไม่ให้คนอื่นที่แอบเข้าลิงก์นี้มาแก้กระทู้ได้
     if request.user != topic.created_by:
         return redirect("topic_list")
 
@@ -105,9 +103,7 @@ def edit_topic(request, topic_id):
 
 @login_required
 def user_profile(request):
-    # ดึงกระทู้ที่ผู้ใช้คนนี้เป็นคนตั้ง
     my_topics = Topic.objects.filter(created_by=request.user).order_by("-created_at")
-    # ดึงคอมเมนต์ที่ผู้ใช้คนนี้เป็นคนพิมพ์
     my_comments = Comment.objects.filter(author=request.user).order_by("-created_at")
 
     return render(
