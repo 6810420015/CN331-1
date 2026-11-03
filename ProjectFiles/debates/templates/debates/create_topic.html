@@ -15,7 +15,7 @@
                 <form method="POST">
                     {% csrf_token %}
                     
-                    <!-- ส่วนฟอร์มกระทู้หลัก (หัวข้อ, รายละเอียด) -->
+                    <!-- ส่วนหัวข้อหลัก -->
                     {{ form.as_p }}
                     
                     <hr class="my-4 text-muted">
@@ -32,14 +32,14 @@
                         </div>
                     </div>
                     
-                    <!-- ปุ่มเพิ่มตัวเลือก (เรียกใช้ JavaScript) -->
+                    <!-- ปุ่มเพิ่มตัวเลือก  -->
                     <button type="button" class="btn btn-outline-secondary btn-sm mt-1" onclick="addSide()">
                         <i class="bi bi-plus-circle me-1"></i> เพิ่มตัวเลือก
                     </button>
                     
                     <div class="d-flex gap-2 mt-4 pt-4 border-top">
                         <button type="submit" class="btn btn-orange px-4 fw-bold">
-                            <i class="bi bi-send-fill me-1"></i> โพสต์กระทู้
+                            <i class="bi bi-send-fill me-1"></i> สร้างหัวข้อ
                         </button>
                         <a href="{% url 'topic_list' %}" class="btn btn-outline-secondary px-4">ยกเลิก</a>
                     </div>
@@ -49,7 +49,7 @@
     </div>
 </div>
 
-<!-- JavaScript สำหรับเพิ่มช่องกรอกตัวเลือก -->
+<!-- เพิ่มช่องกรอกตัวเลือก -->
 <script>
     function addSide() {
         const container = document.getElementById('sides-container');
@@ -67,7 +67,7 @@
         input.placeholder = 'ตัวเลือกที่ ' + sideCount;
         input.required = true;
         
-        // สร้างปุ่มลบ (X)
+        // สร้างปุ่มลบ 
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'btn btn-outline-danger';
@@ -76,7 +76,6 @@
             div.remove();
         };
         
-        // ประกอบร่างแล้วจับใส่หน้าเว็บ
         div.appendChild(input);
         div.appendChild(removeBtn);
         container.appendChild(div);
