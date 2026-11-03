@@ -30,22 +30,22 @@
                 </button>
             </div>
             
-            <!-- ปุ่มตั้งประเด็นใหม่ -->
+            <!-- ปุ่มตั้งหัวข้อใหม่ -->
             <a href="{% url 'create_topic' %}" class="btn btn-orange shadow-sm d-flex align-items-center text-nowrap">
-                <i class="bi bi-plus-circle me-1"></i> ตั้งประเด็นใหม่
+                <i class="bi bi-plus-circle me-1"></i> ตั้งหัวข้อใหม่
             </a>
         </div>
     </div>
 </div>
 
-<!-- ส่วนแสดงรายการกระทู้ (ครอบด้วย Row และกำหนดคลาสเพื่อสลับมุมมอง) -->
+<!-- ส่วนแสดงรายการหัวข้อ -->
 <div class="row" id="topic-container">
 {% for topic in topics %}
     <!-- ค่าเริ่มต้นให้เป็น col-12 (แถวละ 1) -->
     <div class="col-12 topic-col mb-4">
         <div class="topic-card h-100">
             
-            <!-- ชื่อกระทู้และป้ายเวลา -->
+            <!-- ชื่อหัวข้อและป้ายเวลา -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-2 gap-2">
                 <h2 class="mb-0 order-2 order-md-1" style="font-size: 1.4rem;">{{ topic.title }}</h2>
                 
@@ -64,7 +64,7 @@
 
             <p class="text-secondary">{{ topic.description }}</p>
             <p style="color: gray; font-size: 14px; margin-bottom: 10px;">
-                ตั้งกระทู้โดย: {{ topic.created_by.username }}
+                ตั้งหัวข้อโดย: {{ topic.created_by.username }}
             </p>
 
             <!-- สรุปผลโหวตแบบย่อ -->
@@ -106,7 +106,7 @@
 
                 {% if user == topic.created_by %}
                 <form action="{% url 'delete_topic' topic.id %}" method="POST" class="m-0"
-                    onsubmit="return confirm('แน่ใจหรือไม่ว่าต้องการลบกระทู้นี้?');">
+                    onsubmit="return confirm('แน่ใจหรือไม่ว่าต้องการลบหัวข้อนี้?');">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash3 me-1"></i> ลบ</button>
                 </form>
@@ -119,12 +119,12 @@
     </div>
 {% empty %}
     <div class="col-12">
-        <p class="text-center text-muted">ยังไม่มีกระทู้ในตอนนี้ ลองคลิก "ตั้งประเด็นใหม่" เพื่อเริ่มเลย!</p>
+        <p class="text-center text-muted">ยังไม่มีหัวข้อในตอนนี้ ลองคลิก "ตั้งหัวข้อใหม่" เพื่อเริ่ม</p>
     </div>
 {% endfor %}
 </div>
 
-<!-- สคริปต์สำหรับสลับมุมมองแถว (1 หรือ 2 คอลัมน์) และจดจำสถานะผ่าน localStorage -->
+<!-- สคริปต์สำหรับสลับมุมมองแถว (1 หรือ 2 คอลัมน์) -->
 <script>
     function setView(cols) {
         const topicCols = document.querySelectorAll('.topic-col');

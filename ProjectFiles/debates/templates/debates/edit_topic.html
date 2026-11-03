@@ -1,7 +1,7 @@
 {% extends 'debates/base.html' %}
 
 {% block content %}
-<h2>แก้ไขประเด็นถกเถียง</h2>
+<h2>แก้ไขหัวข้อถกเถียง</h2>
 <form method="POST">
     {% csrf_token %}
     {{ form.as_p }}
