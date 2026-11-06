@@ -1,13 +1,17 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from .models import Topic, Comment
 
 def get_topics(search_query=""):
+    active_topics = Topic.objects.filter(
+        Q(end_date__isnull=True) | Q(end_date__gt=timezone.now())
+    )
     if search_query:
-        return Topic.objects.filter(
+        return active_topics.filter(
             Q(title__icontains=search_query) | Q(description__icontains=search_query)
         ).distinct()
-    return Topic.objects.all()
+    return active_topics
 
 def get_topic(topic_id):
     return get_object_or_404(Topic, id=topic_id)
