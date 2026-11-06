@@ -23,13 +23,14 @@
                     <!-- ส่วนของตัวเลือก (Sides) -->
                     <h5 class="fw-bold mb-3">กำหนดตัวเลือก (ฝั่ง)</h5>
                     <div id="sides-container">
-                        <!-- ตัวเลือกระบุ 2 ฝั่งเริ่มต้น -->
+                        {% for side_name in side_names %}
                         <div class="input-group mb-2">
-                            <input type="text" name="sides" class="form-control" placeholder="ตัวเลือกที่ 1 (เช่น เห็นด้วย)" required>
+                            <input type="text" name="sides" class="form-control" value="{{ side_name }}" placeholder="ตัวเลือกที่ {{ forloop.counter }}" required>
+                            {% if forloop.counter > 2 %}
+                            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()" aria-label="ลบตัวเลือก">&times;</button>
+                            {% endif %}
                         </div>
-                        <div class="input-group mb-2">
-                            <input type="text" name="sides" class="form-control" placeholder="ตัวเลือกที่ 2 (เช่น ไม่เห็นด้วย)" required>
-                        </div>
+                        {% endfor %}
                     </div>
                     
                     <!-- ปุ่มเพิ่มตัวเลือก  -->
