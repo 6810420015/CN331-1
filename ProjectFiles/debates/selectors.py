@@ -16,15 +16,24 @@ def _with_vote_results(queryset):
         ),
     )
 
-def get_topics(search_query=""):
-    active_topics = _with_vote_results(
-        Topic.objects.filter(Q(end_date__isnull=True) | Q(end_date__gt=timezone.now()))
-    ).select_related("created_by").order_by("-created_at", "-id")
+
+def get_topics(search_query="", hide_expired=False):
+    # เริ่มต้นด้วย QuerySet ที่ผูกการนับคะแนนโหวตแล้ว
+    queryset = _with_vote_results(Topic.objects.select_related("created_by")).order_by("-created_at", "-id")
+    
+    # เงื่อนไขซ่อนกระทู้หมดเวลา
+    if hide_expired:
+        now = timezone.now()
+        queryset = queryset.filter(Q(end_date__isnull=True) | Q(end_date__gt=now))
+
+    # เงื่อนไขการค้นหา
     if search_query:
-        return active_topics.filter(
+        queryset = queryset.filter(
             Q(title__icontains=search_query) | Q(description__icontains=search_query)
-        ).distinct()
-    return active_topics
+        )
+        
+    return queryset.distinct()
+
 
 def get_topic(topic_id):
     return get_object_or_404(
@@ -34,13 +43,16 @@ def get_topic(topic_id):
         id=topic_id,
     )
 
+
 def get_user_vote(user, topic):
-    if user.is_authenticated:
-        return topic.comments.filter(author=user, side__isnull=False).first()
-    return None
+    if not user.is_authenticated:
+        return None
+    return Comment.objects.filter(author=user, topic=topic).first()
+
 
 def get_user_topics(user):
     return Topic.objects.filter(created_by=user).order_by("-created_at")
+
 
 def get_user_comments(user):
     return Comment.objects.filter(author=user).order_by("-created_at")

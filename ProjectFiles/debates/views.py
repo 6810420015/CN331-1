@@ -13,17 +13,22 @@ from . import selectors, services
 
 def topic_list(request):
     search_query = request.GET.get("q", "")
-    topics = selectors.get_topics(search_query)
-    page_obj = Paginator(topics, 10).get_page(request.GET.get("page"))
+    show_all = request.GET.get("show_all") == "true"
+    hide_expired = not show_all 
+    topics = selectors.get_topics(search_query, hide_expired)
     return render(request, "debates/topic_list.html", {
-        "topics": page_obj,
-        "page_obj": page_obj,
+        "topics": topics, 
         "search_query": search_query,
+        "hide_expired": hide_expired,
+        "show_all": show_all 
     })
 
 def topic_detail(request, topic_id):
     topic = selectors.get_topic(topic_id)
-    user_vote = selectors.get_user_vote(request.user, topic)
+    if request.user.is_authenticated:
+        user_vote = selectors.get_user_vote(request.user, topic)
+    else:
+        user_vote = None
 
     if request.method == "POST":
         if not request.user.is_authenticated:

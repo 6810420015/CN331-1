@@ -11,6 +11,11 @@
         <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
             <!-- ฟอร์มค้นหา -->
             <form method="GET" action="{% url 'topic_list' %}" class="flex-grow-1" style="max-width: 350px; margin-bottom: 0;">
+                <!-- เปลี่ยนมาใช้ hidden input เพื่อจำสถานะว่ากำลังดูทั้งหมดอยู่ -->
+                {% if show_all %}
+                    <input type="hidden" name="show_all" value="true">
+                {% endif %}
+                
                 <div class="input-group shadow-sm align-items-stretch">
                     <span class="input-group-text bg-white border-end-0 d-flex align-items-center">
                         <i class="bi bi-search" style="color: #ff7b00;"></i>
@@ -19,6 +24,17 @@
                     <button class="btn btn-dark px-3 m-0" type="submit" style="margin: 0 !important;">ค้นหา</button>
                 </div>
             </form>
+
+            <!-- ปุ่มซ่อน/แสดงหัวข้อที่หมดเวลา (สลับเงื่อนไข) -->
+            {% if hide_expired %}
+                <a href="?q={{ search_query|default_if_none:'' }}&show_all=true" class="btn btn-secondary shadow-sm text-nowrap" title="แสดงกระทู้ทั้งหมด">
+                    <i class="bi bi-eye"></i> แสดงทั้งหมด
+                </a>
+            {% else %}
+                <a href="?q={{ search_query|default_if_none:'' }}" class="btn btn-outline-secondary shadow-sm text-nowrap" title="ซ่อนกระทู้ที่หมดเวลาแล้ว">
+                    <i class="bi bi-eye-slash"></i> ซ่อนที่หมดเวลา
+                </a>
+            {% endif %}
 
             <!-- ปุ่มสลับมุมมอง (1 คอลัมน์ / 2 คอลัมน์) -->
             <div class="btn-group shadow-sm" role="group">
@@ -41,11 +57,9 @@
 <!-- ส่วนแสดงรายการหัวข้อ -->
 <div class="row" id="topic-container">
 {% for topic in topics %}
-    <!-- ค่าเริ่มต้นให้เป็น col-12 (แถวละ 1) -->
     <div class="col-12 topic-col mb-4">
         <div class="topic-card h-100">
             
-            <!-- ชื่อหัวข้อและป้ายเวลา -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-2 gap-2">
                 <h2 class="mb-0 order-2 order-md-1" style="font-size: 1.4rem;">{{ topic.title }}</h2>
                 
@@ -67,7 +81,6 @@
                 ตั้งหัวข้อโดย: {{ topic.created_by.username }}
             </p>
 
-            <!-- สรุปผลโหวตแบบย่อ -->
             {% with total_votes=topic.vote_count %}
                 {% if total_votes > 0 %}
                     <div class="mb-3 px-1">
@@ -100,8 +113,8 @@
 
             <!-- ปุ่มจัดการ -->
             <div class="d-flex align-items-center gap-2 mt-3">
-                <a href="{% url 'topic_detail' topic.id %}">
-                    <button class="btn btn-outline-orange btn-sm"><i class="bi bi-chat-text me-1"></i> อ่านและโหวต</button>
+                <a href="{% url 'topic_detail' topic.id %}" class="btn btn-outline-orange btn-sm">
+                    <i class="bi bi-chat-text me-1"></i> อ่านและโหวต
                 </a>
 
                 {% if user == topic.created_by %}
@@ -110,8 +123,8 @@
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash3 me-1"></i> ลบ</button>
                 </form>
-                <a href="{% url 'edit_topic' topic.id %}">
-                    <button class="btn btn-warning btn-sm text-white"><i class="bi bi-pencil-square me-1"></i> แก้ไข</button>
+                <a href="{% url 'edit_topic' topic.id %}" class="btn btn-warning btn-sm text-white">
+                    <i class="bi bi-pencil-square me-1"></i> แก้ไข
                 </a>
                 {% endif %}
             </div>
@@ -119,7 +132,7 @@
     </div>
 {% empty %}
     <div class="col-12">
-        <p class="text-center text-muted">ไม่พบหัวข้อที่ยังเปิดโหวต ลองตั้งหัวข้อใหม่หรือเปลี่ยนคำค้นหา</p>
+        <p class="text-center text-muted">ไม่พบหัวข้อ ลองตั้งหัวข้อใหม่หรือเปลี่ยนคำค้นหา</p>
     </div>
 {% endfor %}
 </div>
@@ -128,13 +141,19 @@
 <nav aria-label="เปลี่ยนหน้ารายการหัวข้อ" class="d-flex justify-content-center mt-3 mb-4">
     <ul class="pagination">
         {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?q={{ search_query|urlencode }}&page={{ page_obj.previous_page_number }}">ก่อนหน้า</a></li>
+        <li class="page-item">
+            <a class="page-link" href="?q={{ search_query|urlencode }}{% if show_all %}&show_all=true{% endif %}&page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>
+        </li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">ก่อนหน้า</span></li>
         {% endif %}
+        
         <li class="page-item disabled"><span class="page-link">หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        
         {% if page_obj.has_next %}
-        <li class="page-item"><a class="page-link" href="?q={{ search_query|urlencode }}&page={{ page_obj.next_page_number }}">ถัดไป</a></li>
+        <li class="page-item">
+            <a class="page-link" href="?q={{ search_query|urlencode }}{% if show_all %}&show_all=true{% endif %}&page={{ page_obj.next_page_number }}">ถัดไป</a>
+        </li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">ถัดไป</span></li>
         {% endif %}
@@ -142,7 +161,6 @@
 </nav>
 {% endif %}
 
-<!-- สคริปต์สำหรับสลับมุมมองแถว (1 หรือ 2 คอลัมน์) -->
 <script>
     function setView(cols) {
         const topicCols = document.querySelectorAll('.topic-col');
@@ -152,9 +170,9 @@
         topicCols.forEach(col => {
             col.classList.remove('col-12', 'col-md-6');
             if (cols === 2) {
-                col.classList.add('col-12', 'col-md-6'); // แถวละ 2 บนจอคอม (col-md-6)
+                col.classList.add('col-12', 'col-md-6');
             } else {
-                col.classList.add('col-12'); // แถวละ 1 เต็มจอ
+                col.classList.add('col-12');
             }
         });
 
@@ -170,11 +188,9 @@
             btn2.classList.add('btn-outline-secondary');
         }
 
-        // บันทึกค่าไว้ในเบราว์เซอร์ เพื่อให้เวลาเปลี่ยนหน้าหรือรีเฟรช ค่าไม่หาย
         localStorage.setItem('topic_view_mode', cols);
     }
 
-    // โหลดค่าที่เคยเลือกไว้ตอนเปิดหน้าเว็บ
     window.addEventListener('DOMContentLoaded', () => {
         const savedView = localStorage.getItem('topic_view_mode');
         if (savedView) {
