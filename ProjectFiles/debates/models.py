@@ -69,5 +69,14 @@ class Comment(models.Model):
     text = models.TextField(verbose_name="ความคิดเห็น")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("topic", "author"),
+                condition=models.Q(side__isnull=False),
+                name="unique_vote_per_user_topic",
+            )
+        ]
+
     def __str__(self):
         return f"Comment by {self.author.username} on {self.topic.title}"

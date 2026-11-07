@@ -3,7 +3,9 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import redirect_to_login
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.paginator import Paginator
+from django.views.decorators.http import require_POST
 from django.shortcuts import redirect, render
 
 from .forms import EditTopicForm, TopicForm
@@ -12,7 +14,12 @@ from . import selectors, services
 def topic_list(request):
     search_query = request.GET.get("q", "")
     topics = selectors.get_topics(search_query)
-    return render(request, "debates/topic_list.html", {"topics": topics, "search_query": search_query})
+    page_obj = Paginator(topics, 10).get_page(request.GET.get("page"))
+    return render(request, "debates/topic_list.html", {
+        "topics": page_obj,
+        "page_obj": page_obj,
+        "search_query": search_query,
+    })
 
 def topic_detail(request, topic_id):
     topic = selectors.get_topic(topic_id)
@@ -52,14 +59,23 @@ def signup(request):
 def create_topic(request):
     if request.method == "POST":
         form = TopicForm(request.POST)
+        side_names = request.POST.getlist("sides")
         if form.is_valid():
-            services.create_topic_with_sides(request.user, form, request.POST.getlist("sides"))
-            return redirect("topic_list")
+            try:
+                services.create_topic_with_sides(request.user, form, side_names)
+            except ValidationError as err:
+                form.add_error(None, err)
+            else:
+                return redirect("topic_list")
     else:
         form = TopicForm()
-    return render(request, "debates/create_topic.html", {"form": form})
+        side_names = ["", ""]
+    if not side_names:
+        side_names = ["", ""]
+    return render(request, "debates/create_topic.html", {"form": form, "side_names": side_names})
 
 @login_required
+@require_POST
 def delete_topic(request, topic_id):
     topic = selectors.get_topic(topic_id)
     services.delete_topic_by_user(request.user, topic)
@@ -69,7 +85,7 @@ def delete_topic(request, topic_id):
 def edit_topic(request, topic_id):
     topic = selectors.get_topic(topic_id)
     if request.user != topic.created_by:
-        return redirect("topic_list")
+        raise PermissionDenied("คุณไม่มีสิทธิ์แก้ไขหัวข้อนี้")
 
     if request.method == "POST":
         form = EditTopicForm(request.POST, instance=topic)

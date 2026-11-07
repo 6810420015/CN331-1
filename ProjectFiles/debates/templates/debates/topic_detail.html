@@ -57,7 +57,7 @@
     {% endif %}
 
     <!-- สรุปผลโหวต -->
-    {% with total_votes=topic.comments.count %}
+    {% with total_votes=topic.vote_count %}
         {% if total_votes > 0 %}
             <h3 class="mb-3 mt-5">สรุปผลโหวต</h3>
             <div class="card shadow-sm border-0 mb-5">
@@ -67,19 +67,19 @@
                             <div class="{% if forloop.first %}text-start{% elif forloop.last %}text-end{% else %}text-center{% endif %}" style="flex: 1;">
                                 <span style="color: {% if forloop.counter == 1 %}#ff7b00{% elif forloop.counter == 2 %}#6c757d{% elif forloop.counter == 3 %}#0d6efd{% else %}#198754{% endif %};">●</span>
                                 <strong>{{ side.name }}</strong>
-                                <div class="text-secondary small">{{ side.comment_set.count }} โหวต ({% widthratio side.comment_set.count total_votes 100 %}%)</div>
+                                <div class="text-secondary small">{{ side.vote_count }} โหวต ({% widthratio side.vote_count total_votes 100 %}%)</div>
                             </div>
                         {% endfor %}
                     </div>
 
                     <div class="progress" style="height: 24px; border-radius: 12px;">
                         {% for side in topic.sides.all %}
-                            {% if side.comment_set.count > 0 %}
+                            {% if side.vote_count > 0 %}
                             <div class="progress-bar fw-bold" role="progressbar" 
-                                 style="width: {% widthratio side.comment_set.count total_votes 100 %}%; 
+                                 style="width: {% widthratio side.vote_count total_votes 100 %}%;
                                         background-color: {% if forloop.counter == 1 %}#ff7b00{% elif forloop.counter == 2 %}#6c757d{% elif forloop.counter == 3 %}#0d6efd{% else %}#198754{% endif %};" 
-                                 aria-valuenow="{% widthratio side.comment_set.count total_votes 100 %}" aria-valuemin="0" aria-valuemax="100">
-                                {% widthratio side.comment_set.count total_votes 100 %}%
+                                 aria-valuenow="{% widthratio side.vote_count total_votes 100 %}" aria-valuemin="0" aria-valuemax="100">
+                                {% widthratio side.vote_count total_votes 100 %}%
                             </div>
                             {% endif %}
                         {% endfor %}
@@ -100,7 +100,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <strong><span style="color: #ff7b00;">@{{ comment.author.username }}</span></strong>
                         <span class="badge border border-warning text-warning bg-light">
-                            เลือกฝั่ง: {{ comment.side.name }}
+                            เลือกฝั่ง: {{ comment.side.name|default:"ยังไม่เลือกฝั่ง" }}
                         </span>
                     </div>
                     <p class="card-text mb-0">{{ comment.text }}</p>
