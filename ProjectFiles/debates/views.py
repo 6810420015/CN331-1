@@ -58,9 +58,7 @@ def topic_detail(request, topic_id):
             )
             messages.success(request, "บันทึกคะแนนและความคิดเห็นแล้ว")
         except ValidationError as err:
-            err_msg = (
-                err.messages[0] if hasattr(err, "messages") else str(err)
-            )
+            err_msg = err.messages[0] if hasattr(err, "messages") else str(err)
             messages.error(request, err_msg)
 
         return redirect("topic_detail", topic_id=topic.id)

@@ -12,8 +12,6 @@ def show_post_time(created_at):
         return ""
 
     if timezone.is_aware(created_at):
-        created_at = timezone.localtime(
-            created_at, ZoneInfo("Asia/Bangkok")
-        )
+        created_at = timezone.localtime(created_at, ZoneInfo("Asia/Bangkok"))
 
     return f"โพสต์เมื่อ {created_at:%d/%m/%Y %H:%M}"

@@ -20,9 +20,7 @@ def create_topic_with_sides(user, form, side_names):
     topic.created_by = user
     topic.save()
 
-    sides_to_create = [
-        Side(topic=topic, name=name) for name in cleaned_sides
-    ]
+    sides_to_create = [Side(topic=topic, name=name) for name in cleaned_sides]
     Side.objects.bulk_create(sides_to_create)
 
     tags_string = form.cleaned_data.get("tags_string", "")
