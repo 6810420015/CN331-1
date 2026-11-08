@@ -2,24 +2,12 @@
 {% load post_time %}
 
 {% block content %}
-<!-- ปรับ CSS ให้มีแถบสีส้มหนาเฉพาะฝั่งซ้าย และเอาเงารอบๆ ออก -->
-<style>
-    .custom-topic-card {
-        border: 1px solid #dee2e6;
-        border-left: 5px solid #ff7b00 !important; /* แถบสีส้มอยู่ฝั่งซ้าย */
-        border-right: 1px solid #dee2e6 !important;
-        border-radius: 8px;
-        background-color: #ffffff;
-        box-shadow: none !important; /* เอาเงารอบๆ ออก */
-    }
-</style>
-
 <!-- ส่วนหัว, ช่องค้นหา, และปุ่มสลับมุมมอง -->
 <div class="row align-items-center pb-3 mb-4 border-bottom border-secondary-subtle">
     <div class="col-md-3 mb-3 mb-md-0">
         <h2 class="mb-0 fw-bold">หัวข้อ Topics</h2>
     </div>
-    
+
     <div class="col-md-9">
         <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
             <!-- ฟอร์มค้นหา -->
@@ -30,7 +18,7 @@
                 
                 <div class="input-group shadow-sm align-items-stretch">
                     <span class="input-group-text bg-white border-end-0 d-flex align-items-center">
-                        <i class="bi bi-search" style="color: #ff7b00;"></i>
+                        <i class="bi bi-search" style="color: var(--moss);"></i>
                     </span>
                     <input type="text" name="q" value="{{ search_query|default_if_none:'' }}" class="form-control border-start-0 m-0" placeholder="ค้นหาชื่อกระทู้..." style="box-shadow: none; margin: 0 !important;">
                     <button class="btn btn-dark px-3 m-0" type="submit" style="margin: 0 !important;">ค้นหา</button>
@@ -57,7 +45,7 @@
                     <i class="bi bi-grid-fill"></i>
                 </button>
             </div>
-            
+
             <!-- ปุ่มตั้งหัวข้อใหม่ -->
             <a href="{% url 'create_topic' %}" class="btn btn-orange shadow-sm d-flex align-items-center text-nowrap">
                 <i class="bi bi-plus-circle me-1"></i> ตั้งหัวข้อใหม่
@@ -70,18 +58,14 @@
 <div class="row" id="topic-container">
 {% for topic in topics %}
     <div class="col-12 topic-col mb-4">
-        <div class="custom-topic-card h-100 p-4">
-            
+        <div class="topic-card h-100">
+
+            <!-- ชื่อหัวข้อและป้ายเวลา -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-2 gap-2">
-                <!-- ชื่อหัวข้อและเวลาโพสต์ -->
-                <div class="d-flex flex-wrap align-items-baseline gap-3 order-2 order-md-1" style="min-width: 0;">
-                    <h2 class="mb-0" style="font-size: 1.4rem; overflow-wrap: anywhere;">{{ topic.title }}</h2>
-                    
-                    <span class="text-muted" style="font-size: 13px;">
-                        {% show_post_time topic.created_at %}
-                    </span>
-                </div>
-                
+                <h2 class="mb-0 order-2 order-md-1" style="font-size: 1.4rem; overflow-wrap: anywhere;">
+                    {{ topic.title }}
+                    <small class="text-muted fw-normal" style="font-size: 0.7em;">{% show_post_time topic.created_at %}</small>
+                </h2>
                 <div class="order-1 order-md-2 align-self-start">
                     {% if topic.end_date %}
                         {% if topic.is_expired %}
@@ -122,19 +106,19 @@
                         <div class="d-flex flex-wrap gap-3 mb-1" style="font-size: 13px;">
                             {% for side in topic.sides.all %}
                                 <span>
-                                    <span style="color: {% if forloop.counter == 1 %}#ff7b00{% elif forloop.counter == 2 %}#6c757d{% elif forloop.counter == 3 %}#0d6efd{% else %}#198754{% endif %};">●</span>
+                                    <span style="color: {% if forloop.counter == 1 %}#56634a{% elif forloop.counter == 2 %}#a77957{% elif forloop.counter == 3 %}#8b9180{% else %}#777166{% endif %};">●</span>
                                     {{ side.name }} ({{ side.vote_count }})
                                 </span>
                             {% endfor %}
                             <span class="text-muted ms-auto">โหวตแล้ว {{ total_votes }} คน</span>
                         </div>
-                        
+
                         <div class="progress" style="height: 10px; border-radius: 5px;">
                             {% for side in topic.sides.all %}
                                 {% if side.vote_count > 0 %}
                                 <div class="progress-bar" role="progressbar" 
                                      style="width: {{ side.percentage|stringformat:'.1f' }}%;
-                                            background-color: {% if forloop.counter == 1 %}#ff7b00{% elif forloop.counter == 2 %}#6c757d{% elif forloop.counter == 3 %}#0d6efd{% else %}#198754{% endif %};" 
+                                            background-color: {% if forloop.counter == 1 %}#56634a{% elif forloop.counter == 2 %}#a77957{% elif forloop.counter == 3 %}#8b9180{% else %}#777166{% endif %};" 
                                      aria-valuenow="{{ side.percentage|stringformat:'.1f' }}" aria-valuemin="0" aria-valuemax="100">
                                 </div>
                                 {% endif %}
