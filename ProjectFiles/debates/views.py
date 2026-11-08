@@ -1,14 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 from django.shortcuts import redirect, render
 
-from .forms import EditTopicForm, TopicForm
+# 1. นำเข้า CustomSignupForm ที่เราสร้างไว้ใน forms.py
+from .forms import EditTopicForm, TopicForm, CustomSignupForm
 from . import selectors, services
 
 def topic_list(request):
@@ -51,13 +51,15 @@ def topic_detail(request, topic_id):
 
 def signup(request):
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        # 2. เปลี่ยนมาใช้ CustomSignupForm แทน UserCreationForm
+        form = CustomSignupForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
             return redirect("topic_list")
     else:
-        form = UserCreationForm()
+        # 3. เปลี่ยนมาใช้ CustomSignupForm สำหรับตอนเปิดหน้าเว็บครั้งแรก
+        form = CustomSignupForm()
     return render(request, "debates/signup.html", {"form": form})
 
 @login_required
