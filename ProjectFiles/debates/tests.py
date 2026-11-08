@@ -74,9 +74,7 @@ class DebatesFormTest(TestCase):
         )
         self.assertTrue(valid_form.is_valid())
 
-        invalid_form = TopicForm(
-            data={"title": "", "description": "No title"}
-        )
+        invalid_form = TopicForm(data={"title": "", "description": "No title"})
         self.assertFalse(invalid_form.is_valid())
 
     def test_edit_topic_form(self):
