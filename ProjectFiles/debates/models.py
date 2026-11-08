@@ -4,9 +4,7 @@ from django.utils import timezone
 
 
 class Tag(models.Model):
-    name = models.CharField(
-        max_length=50, unique=True, verbose_name="ชื่อแท็ก"
-    )
+    name = models.CharField(max_length=50, unique=True, verbose_name="ชื่อแท็ก")
 
     def __str__(self):
         return self.name
@@ -27,6 +25,11 @@ class Topic(models.Model):
         default=False,
         verbose_name="ตั้งหัวข้อแบบไม่ระบุตัวตน",
     )
+
+    @property
+    def vote_count(self):
+        # นับรวมคอมเมนต์ทั้งหมดในกระทู้นี้ที่มีการโหวตเลือกฝั่ง
+        return self.comments.filter(side__isnull=False).count()
 
     def is_expired(self):
         if self.end_date:
@@ -72,6 +75,19 @@ class Side(models.Model):
         max_length=100, verbose_name="ชื่อฝั่ง (เช่น เห็นด้วย/ไม่เห็นด้วย)"
     )
 
+    @property
+    def vote_count(self):
+        # นับจำนวนโหวตเฉพาะฝั่งนี้
+        return self.comment_set.count()
+
+    @property
+    def percentage(self):
+        total_topic_votes = self.topic.vote_count
+        if total_topic_votes == 0:
+            return 0.0
+        # บังคับแปลงเป็น float ก่อนหาร เพื่อไม่ให้โดน PostgreSQL ปัดเศษทิ้งเป็น 0
+        return round((float(self.vote_count) / float(total_topic_votes)) * 100, 1)
+
     def __str__(self):
         return f"{self.topic.title} - {self.name}"
 
@@ -101,6 +117,5 @@ class Comment(models.Model):
                 name="unique_vote_per_user_topic",
             )
         ]
-
     def __str__(self):
         return f"Comment by {self.author.username} on {self.topic.title}"
