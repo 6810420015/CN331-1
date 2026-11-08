@@ -2,15 +2,22 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True, verbose_name="ชื่อแท็ก")
+    def __str__(self):
+        return self.name
 
 class Topic(models.Model):
     title = models.CharField(max_length=200, verbose_name="หัวข้อกระทู้")
     description = models.TextField(verbose_name="รายละเอียดประเด็น")
-    created_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, verbose_name="ผู้ตั้งกระทู้"
-    )
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="ผู้ตั้งกระทู้")
     created_at = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(null=True, blank=True)
+    tags = models.ManyToManyField(Tag, blank=True, related_name='topics', verbose_name="แท็ก")
+    is_anonymous = models.BooleanField(
+        default=False, 
+        verbose_name="ตั้งหัวข้อแบบไม่ระบุตัวตน (ซ่อนชื่อผู้ตั้งและผู้คอมเมนต์ทั้งหมด)"
+    )
 
     def is_expired(self):
         if self.end_date:

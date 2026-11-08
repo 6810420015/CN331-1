@@ -2,8 +2,20 @@
 {% load post_time %}
 
 {% block content %}
+<!-- ปรับ CSS ให้มีแถบสีส้มหนาเฉพาะฝั่งซ้าย และเอาเงารอบๆ ออก -->
+<style>
+    .custom-topic-card {
+        border: 1px solid #dee2e6;
+        border-left: 5px solid #ff7b00 !important; /* แถบสีส้มอยู่ฝั่งซ้าย */
+        border-right: 1px solid #dee2e6 !important;
+        border-radius: 8px;
+        background-color: #ffffff;
+        box-shadow: none !important; /* เอาเงารอบๆ ออก */
+    }
+</style>
+
 <!-- ส่วนหัว, ช่องค้นหา, และปุ่มสลับมุมมอง -->
-<div class="row align-items-center mb-4">
+<div class="row align-items-center pb-3 mb-4 border-bottom border-secondary-subtle">
     <div class="col-md-3 mb-3 mb-md-0">
         <h2 class="mb-0 fw-bold">หัวข้อ Topics</h2>
     </div>
@@ -12,7 +24,6 @@
         <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
             <!-- ฟอร์มค้นหา -->
             <form method="GET" action="{% url 'topic_list' %}" class="flex-grow-1" style="max-width: 350px; margin-bottom: 0;">
-                <!-- เปลี่ยนมาใช้ hidden input เพื่อจำสถานะว่ากำลังดูทั้งหมดอยู่ -->
                 {% if show_all %}
                     <input type="hidden" name="show_all" value="true">
                 {% endif %}
@@ -26,7 +37,7 @@
                 </div>
             </form>
 
-            <!-- ปุ่มซ่อน/แสดงหัวข้อที่หมดเวลา (สลับเงื่อนไข) -->
+            <!-- ปุ่มซ่อน/แสดงหัวข้อที่หมดเวลา -->
             {% if hide_expired %}
                 <a href="?q={{ search_query|default_if_none:'' }}&show_all=true" class="btn btn-secondary shadow-sm text-nowrap" title="แสดงกระทู้ทั้งหมด">
                     <i class="bi bi-eye"></i> แสดงทั้งหมด
@@ -59,7 +70,7 @@
 <div class="row" id="topic-container">
 {% for topic in topics %}
     <div class="col-12 topic-col mb-4">
-        <div class="topic-card h-100">
+        <div class="custom-topic-card h-100 p-4">
             
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-2 gap-2">
                 <!-- ชื่อหัวข้อและเวลาโพสต์ -->
@@ -84,10 +95,26 @@
                 </div>
             </div>
 
-            <p class="text-secondary">{{ topic.description }}</p>
-            <p style="color: gray; font-size: 14px; margin-bottom: 10px;">
-                ตั้งหัวข้อโดย: {{ topic.created_by.username }}
+            <!-- แสดงชื่อผู้ตั้งหัวข้อ -->
+            <p style="color: gray; font-size: 14px; margin-bottom: 5px;">
+                ตั้งหัวข้อโดย: 
+                {% if topic.is_anonymous %}
+                    <i class="bi bi-incognito text-secondary"></i> {{ topic.created_by.username|slice:":2" }}***
+                {% else %}
+                    {{ topic.created_by.username }}
+                {% endif %}
             </p>
+
+            <!-- แสดงผล Tags -->
+            {% if topic.tags.all %}
+            <div class="d-flex flex-wrap gap-1 mb-3">
+                {% for tag in topic.tags.all %}
+                    <span class="badge rounded-pill bg-light text-secondary border border-secondary">
+                        <i class="bi bi-tag-fill me-1"></i>{{ tag.name }}
+                    </span>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             {% with total_votes=topic.vote_count %}
                 {% if total_votes > 0 %}
@@ -120,22 +147,32 @@
             {% endwith %}
 
             <!-- ปุ่มจัดการ -->
-            <div class="d-flex align-items-center gap-2 mt-3">
-                <a href="{% url 'topic_detail' topic.id %}" class="btn btn-outline-orange btn-sm">
-                    <i class="bi bi-chat-text me-1"></i> อ่านและโหวต
-                </a>
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary-subtle">
+                <!-- ฝั่งซ้าย -->
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{% url 'topic_detail' topic.id %}" class="btn btn-outline-orange btn-sm">
+                        <i class="bi bi-chat-text me-1"></i> อ่านและโหวต
+                    </a>
 
-                {% if user == topic.created_by %}
-                <form action="{% url 'delete_topic' topic.id %}" method="POST" class="m-0"
-                    onsubmit="return confirm('แน่ใจหรือไม่ว่าต้องการลบหัวข้อนี้?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash3 me-1"></i> ลบ</button>
-                </form>
-                <a href="{% url 'edit_topic' topic.id %}" class="btn btn-warning btn-sm text-white">
-                    <i class="bi bi-pencil-square me-1"></i> แก้ไข
-                </a>
-                {% endif %}
+                    {% if user == topic.created_by %}
+                    <a href="{% url 'edit_topic' topic.id %}" class="btn btn-warning btn-sm text-white">
+                        <i class="bi bi-pencil-square me-1"></i> แก้ไข
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- ฝั่งขวา (ปุ่มลบ) -->
+                <div>
+                    {% if user == topic.created_by %}
+                    <form action="{% url 'delete_topic' topic.id %}" method="POST" class="m-0"
+                        onsubmit="return confirm('แน่ใจหรือไม่ว่าต้องการลบหัวข้อนี้?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash3 me-1"></i> ลบ</button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
+
         </div>
     </div>
 {% empty %}
