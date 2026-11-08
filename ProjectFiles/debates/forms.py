@@ -88,9 +88,9 @@ class CustomSignupForm(UserCreationForm):
             "    <li>รหัสผ่านต้องไม่ประกอบด้วยตัวเลขเพียงอย่างเดียว</li>\n"
             "</ul>"
         )
-        self.fields["password1"].help_text = mark_safe(password_help_html)
+        self.fields["password1"].help_text = mark_safe(password_help_html)   # nosec B308
         help_text_p2 = (
             '<span style="color: #6c757d; font-size: 0.9em;">'
             "กรอกรหัสผ่านอีกครั้ง</span>"
         )
-        self.fields["password2"].help_text = mark_safe(help_text_p2)
+        self.fields["password2"].help_text = mark_safe(help_text_p2)  # nosec B308
