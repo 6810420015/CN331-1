@@ -54,6 +54,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# โหลด WhiteNoise เฉพาะเมื่อมีการติดตั้งแพ็กเกจ (บน Render)
 try:
     import whitenoise  # noqa: F401
     MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
@@ -78,7 +79,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "debate_project.wsgi.application"
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DATABASES = {
     "default": {
@@ -132,17 +132,17 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": (
-            "whitenoise.storage.CompressedManifestStaticFilesStorage"
-        ),
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
+# ใช้งาน WhiteNoise Storage เมื่อมีแพ็กเกจ (บน Render)
 try:
     import whitenoise  # noqa: F401
     STORAGES["staticfiles"]["BACKEND"] = (
@@ -150,6 +150,8 @@ try:
     )
 except ImportError:
     pass
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 if DEBUG:
     MAILERS = {
