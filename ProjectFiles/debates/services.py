@@ -1,7 +1,6 @@
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
-from .models import Side, Comment
-
+from .models import Side, Comment, Topic, Tag
 
 def validate_side_names(side_names):
     names = [name.strip() for name in side_names if name.strip()]
@@ -36,22 +35,49 @@ def submit_vote(user, topic, side_id, comment_text):
                 topic=topic, author=user, side=selected_side, text=comment_text.strip()
             )
     except IntegrityError as err:
-        # The database constraint closes the race where two requests pass the
-        # existence check at the same time.
         if topic.comments.filter(author=user, side__isnull=False).exists():
             raise ValidationError("คุณได้ลงคะแนนในหัวข้อนี้แล้ว") from err
         raise
 
+def _assign_tags(topic, tags_string):
+    if not tags_string:
+        topic.tags.clear()
+        return
+        
+    tag_names = [name.strip() for name in tags_string.split(',') if name.strip()]
+    tag_objs = []
+    for name in set(tag_names):
+        tag_obj, created = Tag.objects.get_or_create(name=name)
+        tag_objs.append(tag_obj)
+        
+    topic.tags.set(tag_objs)
+
+
 def create_topic_with_sides(user, form, side_names):
     validated_names = validate_side_names(side_names)
+    
     with transaction.atomic():
         topic = form.save(commit=False)
         topic.created_by = user
         topic.save()
+        
         Side.objects.bulk_create(
             [Side(topic=topic, name=side_name) for side_name in validated_names]
         )
+        
+        tags_string = form.cleaned_data.get('tags_string', '')
+        _assign_tags(topic, tags_string)
+        
     return topic
+
+
+def update_topic(topic, form):
+    with transaction.atomic():
+        topic = form.save()
+        tags_string = form.cleaned_data.get('tags_string', '')
+        _assign_tags(topic, tags_string)
+    return topic
+
 
 def delete_topic_by_user(user, topic):
     if user != topic.created_by:

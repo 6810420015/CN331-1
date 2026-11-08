@@ -6,8 +6,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 from django.shortcuts import redirect, render
-
-# 1. นำเข้า CustomSignupForm ที่เราสร้างไว้ใน forms.py
+from django.utils import timezone  
 from .forms import EditTopicForm, TopicForm, CustomSignupForm
 from . import selectors, services
 
@@ -29,6 +28,11 @@ def topic_detail(request, topic_id):
         user_vote = selectors.get_user_vote(request.user, topic)
     else:
         user_vote = None
+        
+    comments = topic.comments.all()
+    selected_side_id = request.GET.get("side_filter")
+    if selected_side_id and selected_side_id.isdigit():
+        comments = comments.filter(side_id=int(selected_side_id))
 
     if request.method == "POST":
         if not request.user.is_authenticated:
@@ -47,18 +51,21 @@ def topic_detail(request, topic_id):
             
         return redirect("topic_detail", topic_id=topic.id)
 
-    return render(request, "debates/topic_detail.html", {"topic": topic, "user_vote": user_vote})
+    return render(request, "debates/topic_detail.html", {
+        "topic": topic, 
+        "user_vote": user_vote,
+        "comments": comments,              
+        "selected_side_id": selected_side_id
+    })
 
 def signup(request):
     if request.method == "POST":
-        # 2. เปลี่ยนมาใช้ CustomSignupForm แทน UserCreationForm
         form = CustomSignupForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
             return redirect("topic_list")
     else:
-        # 3. เปลี่ยนมาใช้ CustomSignupForm สำหรับตอนเปิดหน้าเว็บครั้งแรก
         form = CustomSignupForm()
     return render(request, "debates/signup.html", {"form": form})
 
@@ -95,12 +102,18 @@ def edit_topic(request, topic_id):
         raise PermissionDenied("คุณไม่มีสิทธิ์แก้ไขหัวข้อนี้")
 
     if request.method == "POST":
+        if request.POST.get("action") == "close_voting":
+            topic.end_date = timezone.now()
+            topic.save()
+            return redirect("topic_detail", topic_id=topic.id)
+
         form = EditTopicForm(request.POST, instance=topic)
         if form.is_valid():
-            form.save()
+            services.update_topic(topic, form)  
             return redirect("topic_detail", topic_id=topic.id)
     else:
         form = EditTopicForm(instance=topic)
+        
     return render(request, "debates/edit_topic.html", {"form": form, "topic": topic})
 
 @login_required
