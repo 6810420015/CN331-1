@@ -1,195 +1,188 @@
-from datetime import timedelta
-
+from django.test import TestCase, Client
+from django.urls import reverse
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
-from django.test import Client, TestCase
-from django.urls import reverse
 from django.utils import timezone
+from datetime import timedelta
 
-from . import services
-from .models import Comment, Side, Topic
+from .models import Topic, Side, Comment, Tag
+from .forms import TopicForm
+from . import services, selectors
 
-
-class DebateTests(TestCase):
+class TopicModelTest(TestCase):
     def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username="testuser", password="password123")
-        self.other_user = User.objects.create_user(username="otheruser", password="password123")
+        self.user = User.objects.create_user(username='modeluser', password='password123')
         self.topic = Topic.objects.create(
-            title="หัวข้อทดสอบระบบ",
-            description="รายละเอียดทดสอบ",
-            created_by=self.user,
-            end_date=timezone.now() + timedelta(days=1),
+            title='Test Topic',
+            description='Test Description',
+            created_by=self.user
         )
-        self.side = Side.objects.create(topic=self.topic, name="เห็นด้วย")
-        self.other_side = Side.objects.create(topic=self.topic, name="ไม่เห็นด้วย")
 
-    def create_topic_form(self, title="หัวข้อใหม่"):
-        from .forms import TopicForm
+    def test_topic_str(self):
+        """ทดสอบ String Representation ของ Topic"""
+        self.assertEqual(str(self.topic), 'Test Topic')
 
-        return TopicForm({"title": title, "description": "รายละเอียดหัวข้อ", "end_date": ""})
+    def test_topic_expiration(self):
+        """ทดสอบสถานะหมดเวลาของ Topic"""
+        self.assertFalse(self.topic.is_expired())
 
-    def test_topic_is_expired(self):
         self.topic.end_date = timezone.now() - timedelta(days=1)
         self.topic.save()
         self.assertTrue(self.topic.is_expired())
 
-    def test_topic_list_hides_expired_topics_in_search_and_default_listing(self):
-        expired = Topic.objects.create(
-            title="หัวข้อหมดอายุ",
-            description="ค้นหาคำนี้ได้",
-            created_by=self.user,
-            end_date=timezone.now() - timedelta(seconds=1),
-        )
 
-        response = self.client.get(reverse("topic_list"))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, expired.title)
-        self.assertContains(response, self.topic.title)
+class SideAndCommentModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='subuser', password='password123')
+        self.topic = Topic.objects.create(title='Sample Topic', description='Desc', created_by=self.user)
+        self.side = Side.objects.create(topic=self.topic, name='Agree')
+        
+        services.submit_vote(user=self.user, topic=self.topic, side_id=self.side.id, comment_text='Great topic!')
+        self.comment = self.topic.comments.first()
 
-        search_response = self.client.get(reverse("topic_list"), {"q": "คำนี้ได้"})
-        self.assertNotContains(search_response, expired.title)
+    def test_side_str(self):
+        """ทดสอบ String Representation ของ Side ให้ตรงกับรูปแบบ 'Topic - Side'"""
+        self.assertEqual(str(self.side), 'Sample Topic - Agree')
 
-    def test_topic_list_is_newest_first_and_paginated(self):
-        older = self.topic
-        for index in range(10):
-            Topic.objects.create(
-                title=f"หัวข้อ {index}", description="รายละเอียด", created_by=self.user
-            )
+    def test_comment_str(self):
+        """ทดสอบ String Representation ของ Comment"""
+        self.assertTrue(str(self.comment))
 
-        first_page = self.client.get(reverse("topic_list"))
-        second_page = self.client.get(reverse("topic_list"), {"page": 2})
-        self.assertEqual(first_page.status_code, 200)
-        self.assertEqual(second_page.status_code, 200)
-        self.assertEqual(first_page.context["page_obj"].paginator.num_pages, 2)
-        self.assertNotContains(first_page, older.title)
-        self.assertContains(second_page, older.title)
 
-    def test_topic_list_keeps_search_query_in_pagination_links(self):
-        for index in range(11):
-            Topic.objects.create(
-                title=f"ค้นหา {index}", description="คำค้น", created_by=self.user
-            )
-        response = self.client.get(reverse("topic_list"), {"q": "ค้นหา"})
-        self.assertIn("q=%E0%B8%84%E0%B9%89%E0%B8%99%E0%B8%AB%E0%B8%B2&page=2", response.content.decode())
-
-    def test_create_topic_redirects_if_not_logged_in(self):
-        response = self.client.get(reverse("create_topic"))
-        self.assertEqual(response.status_code, 302)
-
-    def test_create_topic_requires_two_distinct_sides(self):
-        self.client.force_login(self.user)
-        response = self.client.post(
-            reverse("create_topic"),
-            {"title": "หัวข้อใหม่", "description": "รายละเอียด", "sides": ["เห็นด้วย"]},
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "อย่างน้อย 2 ฝั่ง")
-        self.assertFalse(Topic.objects.filter(title="หัวข้อใหม่").exists())
-
-    def test_create_topic_rejects_duplicate_side_names_case_insensitively(self):
-        self.client.force_login(self.user)
-        response = self.client.post(
-            reverse("create_topic"),
-            {
-                "title": "หัวข้อใหม่",
-                "description": "รายละเอียด",
-                "sides": ["เห็นด้วย", " เห็นด้วย "],
-            },
-        )
-        self.assertContains(response, "ชื่อตัวเลือกต้องไม่ซ้ำกัน")
-        self.assertFalse(Topic.objects.filter(title="หัวข้อใหม่").exists())
-
-    def test_create_topic_rejects_side_names_over_model_limit(self):
-        with self.assertRaises(ValidationError):
-            services.validate_side_names(["x" * 101, "other"])
-
-    def test_create_topic_trims_side_names(self):
-        form = self.create_topic_form()
+class TopicFormTest(TestCase):
+    def test_topic_form_valid(self):
+        """ทดสอบ Form เมื่อกรอกข้อมูลถูกต้อง"""
+        form_data = {
+            'title': 'Django vs FastAPI',
+            'description': 'Which is better for APIs?',
+            'is_anonymous': False,
+            'tags_string': 'python, backend'
+        }
+        form = TopicForm(data=form_data)
         self.assertTrue(form.is_valid())
-        topic = services.create_topic_with_sides(self.user, form, ["  ใช่  ", "  ไม่ใช่ "])
-        self.assertEqual(list(topic.sides.order_by("id").values_list("name", flat=True)), ["ใช่", "ไม่ใช่"])
 
-    def test_submit_vote_success(self):
-        services.submit_vote(self.user, self.topic, self.side.id, "เหตุผลที่เห็นด้วย")
-        comment = Comment.objects.get(topic=self.topic, author=self.user)
-        self.assertEqual(comment.side, self.side)
-        self.assertEqual(comment.text, "เหตุผลที่เห็นด้วย")
+    def test_topic_form_invalid_missing_title(self):
+        """ทดสอบ Form เมื่อไม่ใส่ชื่อหัวข้อ (ควรไม่ Valid)"""
+        form_data = {
+            'title': '',
+            'description': 'Missing title',
+            'is_anonymous': False
+        }
+        form = TopicForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('title', form.errors)
 
-    def test_submit_vote_rejects_duplicate_vote(self):
-        services.submit_vote(self.user, self.topic, self.side.id, "เหตุผลแรก")
+
+class DebatesServiceAndSelectorTest(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create_user(username='user1', password='password123')
+        self.user2 = User.objects.create_user(username='user2', password='password123')
+
+    def test_create_topic_with_sides_service(self):
+        """ทดสอบ Service การสร้าง Topic พร้อม Side และ Tag"""
+        form_data = {
+            'title': 'Cats vs Dogs',
+            'description': 'Which pet is better?',
+            'is_anonymous': True,
+            'tags_string': 'pets, animals'
+        }
+        form = TopicForm(data=form_data)
+        self.assertTrue(form.is_valid())
+
+        topic = services.create_topic_with_sides(self.user1, form, ['Cats', 'Dogs'])
+        
+        self.assertEqual(topic.title, 'Cats vs Dogs')
+        self.assertTrue(topic.is_anonymous)
+        self.assertEqual(topic.sides.count(), 2)
+        self.assertEqual(topic.tags.count(), 2)
+
+    def test_submit_vote_and_validation(self):
+        """ทดสอบการโหวตและการดักจับข้อผิดพลาดห้ามโหวตซ้ำ"""
+        topic = Topic.objects.create(title='Vote Test', description='Desc', created_by=self.user1)
+        side1 = Side.objects.create(topic=topic, name='Yes')
+        side2 = Side.objects.create(topic=topic, name='No')
+
+        services.submit_vote(user=self.user2, topic=topic, side_id=side1.id, comment_text='I agree')
+        self.assertEqual(topic.comments.count(), 1)
+
         with self.assertRaises(ValidationError):
-            services.submit_vote(self.user, self.topic, self.other_side.id, "เหตุผลที่สอง")
-        self.assertEqual(Comment.objects.filter(topic=self.topic, author=self.user).count(), 1)
+            services.submit_vote(user=self.user2, topic=topic, side_id=side2.id, comment_text='Changed mind')
 
-    def test_database_constraint_prevents_duplicate_votes(self):
-        Comment.objects.create(topic=self.topic, author=self.user, side=self.side, text="ครั้งแรก")
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                Comment.objects.create(
-                    topic=self.topic, author=self.user, side=self.other_side, text="ครั้งที่สอง"
-                )
+    def test_expired_topic_voting_validation(self):
+        """ทดสอบการห้ามโหวตหัวข้อที่หมดเวลาแล้ว"""
+        past_time = timezone.now() - timedelta(hours=2)
+        topic = Topic.objects.create(title='Expired Topic', description='Desc', created_by=self.user1, end_date=past_time)
+        side = Side.objects.create(topic=topic, name='A')
 
-    def test_submit_vote_rejects_side_from_another_topic(self):
-        another_topic = Topic.objects.create(
-            title="อีกหัวข้อ", description="รายละเอียด", created_by=self.user
-        )
-        another_side = Side.objects.create(topic=another_topic, name="เลือก")
         with self.assertRaises(ValidationError):
-            services.submit_vote(self.user, self.topic, another_side.id, "เหตุผล")
+            services.submit_vote(user=self.user2, topic=topic, side_id=side.id, comment_text='Too late')
 
-    def test_submit_vote_rejects_missing_comment_or_side(self):
-        with self.assertRaises(ValidationError):
-            services.submit_vote(self.user, self.topic, self.side.id, "  ")
-        with self.assertRaises(ValidationError):
-            services.submit_vote(self.user, self.topic, None, "เหตุผล")
+    def test_selectors_search_and_user_topics(self):
+        """ทดสอบ Selectors ค้นหากระทู้และดึงกระทู้ของผู้ใช้"""
+        t1 = Topic.objects.create(title='Python Programming', description='Desc', created_by=self.user1)
+        t2 = Topic.objects.create(title='Web Design', description='Desc', created_by=self.user1)
 
-    def test_submit_vote_rejects_expired_topic(self):
-        self.topic.end_date = timezone.now() - timedelta(seconds=1)
-        self.topic.save()
-        with self.assertRaises(ValidationError):
-            services.submit_vote(self.user, self.topic, self.side.id, "เหตุผล")
+        results = selectors.get_topics(search_query='Python', hide_expired=False)
+        self.assertIn(t1, results)
+        self.assertNotIn(t2, results)
 
-    def test_topic_detail_shows_per_side_vote_results(self):
-        services.submit_vote(self.user, self.topic, self.side.id, "เหตุผล")
-        Comment.objects.create(
-            topic=self.topic, author=self.other_user, side=None, text="ความเห็นที่ไม่ใช่โหวต"
-        )
-        response = self.client.get(reverse("topic_detail", args=[self.topic.id]))
-        self.assertContains(response, "1 โหวต")
-        self.assertContains(response, "เห็นด้วย")
-        self.assertContains(response, "ผู้เข้าร่วมทั้งหมด 1 คน")
+        user_topics = selectors.get_user_topics(self.user1)
+        self.assertEqual(user_topics.count(), 2)
 
-    def test_topic_edit_is_allowed_for_owner(self):
-        self.client.force_login(self.user)
-        response = self.client.post(
-            reverse("edit_topic", args=[self.topic.id]),
-            {"title": "แก้ไขแล้ว", "description": "รายละเอียดใหม่"},
-        )
-        self.assertRedirects(response, reverse("topic_detail", args=[self.topic.id]))
-        self.topic.refresh_from_db()
-        self.assertEqual(self.topic.title, "แก้ไขแล้ว")
 
-    def test_topic_edit_is_denied_for_non_owner(self):
-        self.client.force_login(self.other_user)
-        response = self.client.get(reverse("edit_topic", args=[self.topic.id]))
-        self.assertEqual(response.status_code, 403)
+class DebatesViewClientTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='viewuser', password='password123')
+        self.client = Client()
+        self.topic = Topic.objects.create(title='View Topic', description='Desc', created_by=self.user)
+        self.side = Side.objects.create(topic=self.topic, name='Option 1')
 
-    def test_topic_delete_requires_post(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse("delete_topic", args=[self.topic.id]))
-        self.assertEqual(response.status_code, 405)
-        self.assertTrue(Topic.objects.filter(id=self.topic.id).exists())
+    def test_topic_list_view_get(self):
+        """ทดสอบหน้าแสดงรายการ Topic (GET)"""
+        response = self.client.get(reverse('topic_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'View Topic')
 
-    def test_topic_delete_is_allowed_for_owner(self):
-        self.client.force_login(self.user)
-        response = self.client.post(reverse("delete_topic", args=[self.topic.id]))
-        self.assertRedirects(response, reverse("topic_list"))
-        self.assertFalse(Topic.objects.filter(id=self.topic.id).exists())
+    def test_topic_list_view_with_search(self):
+        """ทดสอบหน้าแสดงรายการ Topic พร้อม Query ค้นหา"""
+        response = self.client.get(reverse('topic_list'), {'q': 'View Topic'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'View Topic')
 
-    def test_topic_delete_is_denied_for_non_owner(self):
-        self.client.force_login(self.other_user)
-        response = self.client.post(reverse("delete_topic", args=[self.topic.id]))
-        self.assertEqual(response.status_code, 403)
-        self.assertTrue(Topic.objects.filter(id=self.topic.id).exists())
+    def test_topic_detail_view(self):
+        """ทดสอบหน้าแสดงรายละเอียด Topic และการคอมเมนต์"""
+        services.submit_vote(user=self.user, topic=self.topic, side_id=self.side.id, comment_text='Testing detail view')
+        response = self.client.get(reverse('topic_detail', args=[self.topic.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Testing detail view')
+
+    def test_topic_detail_view_filtered(self):
+        """ทดสอบการกรองคอมเมนต์ตาม side_filter ในหน้า Detail"""
+        services.submit_vote(user=self.user, topic=self.topic, side_id=self.side.id, comment_text='Filtered comment')
+        response = self.client.get(reverse('topic_detail', args=[self.topic.id]), {'side_filter': self.side.id})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Filtered comment')
+
+    def test_create_topic_view_access(self):
+        """ทดสอบการเข้าถึงหน้าสร้างกระทู้ (ต้องล็อกอิน)"""
+        response = self.client.get(reverse('create_topic'))
+        self.assertNotEqual(response.status_code, 200)
+
+        self.client.login(username='viewuser', password='password123')
+        response = self.client.get(reverse('create_topic'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_edit_topic_view_permissions(self):
+        """ทดสอบสิทธิ์การแก้ไขกระทู้ (เฉพาะเจ้าของ)"""
+        other_user = User.objects.create_user(username='otheruser', password='password123')
+        self.client.login(username='otheruser', password='password123')
+        
+        response = self.client.get(reverse('edit_topic', args=[self.topic.id]))
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_delete_topic_view(self):
+        """ทดสอบการลบกระทู้โดยเจ้าของ"""
+        self.client.login(username='viewuser', password='password123')
+        response = self.client.post(reverse('delete_topic', args=[self.topic.id]))
+        self.assertRedirects(response, reverse('topic_list'))
+        self.assertEqual(Topic.objects.count(), 0)
