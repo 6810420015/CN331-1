@@ -6,8 +6,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
-from .forms import CustomSignupForm, EditTopicForm, TopicForm
 from . import selectors, services
+from .forms import CustomSignupForm, EditTopicForm, TopicForm
 
 
 def topic_list(request):
@@ -16,12 +16,16 @@ def topic_list(request):
     show_all = request.GET.get("show_all") == "true"
     hide_expired = not show_all
     topics = selectors.get_topics(search_query, hide_expired)
-    return render(request, "debates/topic_list.html", {
-        "topics": topics,
-        "search_query": search_query,
-        "hide_expired": hide_expired,
-        "show_all": show_all
-    })
+    return render(
+        request,
+        "debates/topic_list.html",
+        {
+            "topics": topics,
+            "search_query": search_query,
+            "hide_expired": hide_expired,
+            "show_all": show_all,
+        },
+    )
 
 
 def topic_detail(request, topic_id):
@@ -50,20 +54,27 @@ def topic_detail(request, topic_id):
                 user=request.user,
                 topic=topic,
                 side_id=request.POST.get("side"),
-                comment_text=request.POST.get("comment_text", "").strip()
+                comment_text=request.POST.get("comment_text", "").strip(),
             )
             messages.success(request, "บันทึกคะแนนและความคิดเห็นแล้ว")
         except ValidationError as err:
-            messages.error(request, err.messages[0] if hasattr(err, "messages") else str(err))
+            err_msg = (
+                err.messages[0] if hasattr(err, "messages") else str(err)
+            )
+            messages.error(request, err_msg)
 
         return redirect("topic_detail", topic_id=topic.id)
 
-    return render(request, "debates/topic_detail.html", {
-        "topic": topic,
-        "user_vote": user_vote,
-        "comments": comments,
-        "selected_side_id": selected_side_id
-    })
+    return render(
+        request,
+        "debates/topic_detail.html",
+        {
+            "topic": topic,
+            "user_vote": user_vote,
+            "comments": comments,
+            "selected_side_id": selected_side_id,
+        },
+    )
 
 
 def signup(request):
@@ -90,7 +101,9 @@ def create_topic(request):
         side_names = request.POST.getlist("sides")
         if form.is_valid():
             try:
-                services.create_topic_with_sides(request.user, form, side_names)
+                services.create_topic_with_sides(
+                    request.user, form, side_names
+                )
             except ValidationError as err:
                 form.add_error(None, err)
             else:
@@ -101,7 +114,11 @@ def create_topic(request):
 
     if not side_names:
         side_names = ["", ""]
-    return render(request, "debates/create_topic.html", {"form": form, "side_names": side_names})
+    return render(
+        request,
+        "debates/create_topic.html",
+        {"form": form, "side_names": side_names},
+    )
 
 
 @login_required
@@ -135,7 +152,9 @@ def edit_topic(request, topic_id):
     else:
         form = EditTopicForm(instance=topic)
 
-    return render(request, "debates/edit_topic.html", {"form": form, "topic": topic})
+    return render(
+        request, "debates/edit_topic.html", {"form": form, "topic": topic}
+    )
 
 
 @login_required
@@ -143,4 +162,8 @@ def user_profile(request):
     """หน้าโปรไฟล์ส่วนตัวของผู้ใช้"""
     my_topics = selectors.get_user_topics(request.user)
     my_comments = selectors.get_user_comments(request.user)
-    return render(request, "debates/profile.html", {"my_topics": my_topics, "my_comments": my_comments})
+    return render(
+        request,
+        "debates/profile.html",
+        {"my_topics": my_topics, "my_comments": my_comments},
+    )

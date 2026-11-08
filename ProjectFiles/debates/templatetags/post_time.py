@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo
+
 from django import template
 from django.utils import timezone
 
@@ -8,9 +10,6 @@ register = template.Library()
 def show_post_time(created_at):
     if not created_at:
         return ""
-
-    # แปลงเป็นเวลาไทย
-    from zoneinfo import ZoneInfo
 
     if timezone.is_aware(created_at):
         created_at = timezone.localtime(
