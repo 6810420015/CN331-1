@@ -1,22 +1,31 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 from django.utils import timezone
 
+
 class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True, verbose_name="ชื่อแท็ก")
+    name = models.CharField(
+        max_length=50, unique=True, verbose_name="ชื่อแท็ก"
+    )
+
     def __str__(self):
         return self.name
+
 
 class Topic(models.Model):
     title = models.CharField(max_length=200, verbose_name="หัวข้อกระทู้")
     description = models.TextField(verbose_name="รายละเอียดประเด็น")
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="ผู้ตั้งกระทู้")
+    created_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name="ผู้ตั้งกระทู้"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(null=True, blank=True)
-    tags = models.ManyToManyField(Tag, blank=True, related_name='topics', verbose_name="แท็ก")
+    tags = models.ManyToManyField(
+        Tag, blank=True, related_name="topics", verbose_name="แท็ก"
+    )
     is_anonymous = models.BooleanField(
-        default=False, 
-        verbose_name="ตั้งหัวข้อแบบไม่ระบุตัวตน (ซ่อนชื่อผู้ตั้งและผู้คอมเมนต์ทั้งหมด)"
+        default=False,
+        verbose_name="ตั้งหัวข้อแบบไม่ระบุตัวตน",
     )
 
     def is_expired(self):
@@ -56,16 +65,24 @@ class Topic(models.Model):
 
 
 class Side(models.Model):
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="sides")
-    name = models.CharField(max_length=100, verbose_name="ชื่อฝั่ง (เช่น เห็นด้วย/ไม่เห็นด้วย)")
+    topic = models.ForeignKey(
+        Topic, on_delete=models.CASCADE, related_name="sides"
+    )
+    name = models.CharField(
+        max_length=100, verbose_name="ชื่อฝั่ง (เช่น เห็นด้วย/ไม่เห็นด้วย)"
+    )
 
     def __str__(self):
         return f"{self.topic.title} - {self.name}"
 
 
 class Comment(models.Model):
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="comments")
-    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="ผู้คอมเมนต์")
+    topic = models.ForeignKey(
+        Topic, on_delete=models.CASCADE, related_name="comments"
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name="ผู้คอมเมนต์"
+    )
     side = models.ForeignKey(
         Side,
         on_delete=models.SET_NULL,
