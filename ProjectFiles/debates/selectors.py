@@ -6,20 +6,15 @@ from .models import Comment, Topic
 
 def get_topics(search_query="", hide_expired=False):
     """ดึงกระทู้พร้อมความสัมพันธ์ ป้องกันปัญหา N+1 queries"""
-    qs = Topic.objects.select_related("created_by").prefetch_related(
-        "sides", "tags"
-    )
+    qs = Topic.objects.select_related("created_by").prefetch_related("sides", "tags")
 
     if search_query:
         qs = qs.filter(
-            Q(title__icontains=search_query)
-            | Q(tags__name__icontains=search_query)
+            Q(title__icontains=search_query) | Q(tags__name__icontains=search_query)
         ).distinct()
 
     if hide_expired:
-        qs = qs.filter(
-            Q(end_date__isnull=True) | Q(end_date__gt=timezone.now())
-        )
+        qs = qs.filter(Q(end_date__isnull=True) | Q(end_date__gt=timezone.now()))
 
     return qs.order_by("-created_at")
 
@@ -41,9 +36,7 @@ def get_topic(topic_id):
 def get_user_vote(user, topic):
     """ตรวจดูว่าผู้ใช้เคยลงคะแนนในหัวข้อนี้หรือยัง"""
     return (
-        Comment.objects.filter(topic=topic, author=user)
-        .select_related("side")
-        .first()
+        Comment.objects.filter(topic=topic, author=user).select_related("side").first()
     )
 
 

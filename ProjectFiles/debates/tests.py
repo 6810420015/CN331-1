@@ -321,14 +321,14 @@ class DebatesViewClientTest(TestCase):
 
     def test_delete_topic_view(self):
         """ทดสอบการลบกระทู้"""
-        self.client.login(username="viewuser", password="password123")
+        self.client.login(username="viewuser", password="password123")  # nosec B106
         res = self.client.post(reverse("delete_topic", args=[self.topic.id]))
         self.assertRedirects(res, reverse("topic_list"))
 
     def test_signup_view_post_invalid(self):
         """ทดสอบการส่งฟอร์มสมัครสมาชิกแบบข้อมูลไม่ถูกต้อง"""
         res = self.client.post(
-            reverse("signup"), {"username": "", "password": "123"}
+            reverse("signup"), {"username": "", "password": "123"}  # nosec B105
         )
         self.assertEqual(res.status_code, 200)
 
